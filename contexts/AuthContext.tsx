@@ -18,8 +18,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSession();
-  }, []);
+  let mounted = true;
+
+  async function loadSession() {
+    try {
+      const session = await SecureStore.getItemAsync('session');
+
+      if (mounted && session) {
+        setUser(JSON.parse(session));
+      }
+    } catch (error) {
+      console.error('Erro ao carregar sessão:', error);
+    } finally {
+      if (mounted) {
+        setLoading(false);
+      }
+    }
+  }
+
+  loadSession();
+
+  return () => {
+    mounted = false;
+  };
+}, []);
 
   useEffect(() => {
     if (!user || !user.id || loading) return;
@@ -36,20 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearInterval(intervalId);
   }, [user, loading]);
-
-  async function loadSession() {
-    try {
-      const session = await SecureStore.getItemAsync('session');
-
-      if (session) {
-        setUser(JSON.parse(session));
-      }
-    } catch (error) {
-      console.error('Erro ao carregar sessão:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function signIn(data: AuthResponse) {
     await SecureStore.setItemAsync(
